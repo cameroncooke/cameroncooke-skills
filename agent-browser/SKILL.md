@@ -5,6 +5,14 @@ description: Browser automation using agent-browser CLI. Use when asked to autom
 
 # Agent Browser Automation
 
+## Install
+
+Assume `agent-browser` is already installed. Only install if a command fails with "command not found":
+
+```bash
+npm install -g agent-browser
+```
+
 ## Overview
 
 Use `agent-browser` CLI for fast, reliable browser automation. The tool returns accessibility trees with ref tags (`@e1`, `@e2`, etc.) enabling deterministic element selection without fragile CSS selectors.
