@@ -2,6 +2,11 @@
 
 A collection of custom Agent skills.
 
+## Included Skills
+
+- `agent-browser` - Browser automation using `agent-browser` CLI.
+- `changelog-updater` - Update upcoming `CHANGELOG` release notes with user-facing outcomes, including canonical prerelease handling (for example, `v2.0.0-beta.1` -> `2.0.0` section).
+
 ## Usage
 
 Skills can be installed by copying them to:
