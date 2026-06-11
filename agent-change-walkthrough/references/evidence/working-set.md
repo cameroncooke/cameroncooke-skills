@@ -138,3 +138,54 @@ matched/added/removed/skipped):
 - Observed behavior: only a heading tag marked unchanged steps; readers skimming code blocks took pre-existing code as part of the change.
 - Skill delta: mandatory note line in Step 4 and in the output example; matching exit criterion.
 - Anonymization: pattern-level record; no code retained.
+
+## EX-006: Prose assumed reader knew the codebase
+
+- Label: negative
+- Kind: fix
+- Origin: human-verified
+- Source: user feedback on a real walkthrough produced by the revised skill, 2026-06-11; user supplied a corrected rewrite
+- Status: working
+- Expected behavior: explanations stand alone for a competent developer who has never seen the repository — project-specific terms explained at first mention, mechanisms anchored to general concepts, multi-actor behavior introduced via a numbered concrete scenario, problem stated before mechanism.
+- Observed behavior: setup and step prose leaned on internal tool names, flag-framework conventions, and domain shorthand with no explanation, so the walkthrough was only readable by someone already working in the codebase.
+- Skill delta: "Write for a reader new to the codebase" section in Step 4; setup paragraph contract now problem-first; two new exit criteria; output example's setup paragraph rewritten to model the style.
+- Anonymization: real internal tool names, flag names, branch names, and product domain replaced with the generalized manifest/build domain used by EX-001; sentence structure of both versions preserved.
+
+### Content
+
+Failing prose (structure preserved, names generalized):
+
+> A purely additive registration following the repo's Toggles convention. `api_expose=False` because
+> no frontend code checks this flag — it only gates backend base-selection behavior. Rollout happens
+> via the config-automator YAML, not in this repo, so merging this branch changes nothing for any
+> customer until the flag is enabled.
+
+This assumes the reader knows what the Toggles framework is, what `api_expose` controls, and what
+the config-automator repo does.
+
+User-supplied corrected style (same content, plain English):
+
+> This branch fixes build comparisons for a common pull request setup.
+>
+> Sometimes a build uploads **all** entries. Other times it is **selective**, meaning it uploads
+> only part of the set — for example, only entries from a certain module or platform.
+>
+> The problem happens when one pull request is built on top of another:
+>
+> 1. `main` has a full build with every entry.
+> 2. PR1 has a selective build with only some entries.
+> 3. PR2 is opened on top of PR1.
+> 4. PR2 needs to compare against PR1's build.
+>
+> Before this change, the system ignored PR1's build because it was selective, so PR2 could not find
+> a baseline. After this change, PR1's selective build can serve as the baseline: the system first
+> rebuilds PR1's full entry set by starting from the nearest earlier full build, then applying the
+> selective data on top.
+>
+> This is backend-only, behind the feature flag `organizations:selective-base-builds` — flags are
+> switched on per customer from a separate configuration repo, so merging this changes nothing by
+> itself. No frontend changes and no database migration.
+
+The traits that make the rewrite work: problem first, numbered concrete scenario before mechanism,
+key terms bolded and defined inline, the flag anchored to the general feature-flag concept, short
+sentences.

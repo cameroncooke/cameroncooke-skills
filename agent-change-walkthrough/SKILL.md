@@ -78,6 +78,16 @@ For each story step:
 
 Avoid rigid template labels such as `Why this step exists:` or `Impact:`. Write readable, connected prose instead. Keep headings and narrative readable; put precise location in the snippet header.
 
+### Write for a reader new to the codebase
+
+Write every explanation in plain English for a competent developer who has never seen this repository. Knowing the language is assumed; knowing the codebase, its internal tools, or its domain vocabulary is not.
+
+- Explain every project-specific term at first mention, in the same sentence — internal frameworks, config conventions, repo/service names, and domain vocabulary. Write "gated behind a new feature flag (`organizations:example-flag`); flags are switched on per customer from a separate configuration repo, so merging this change activates nothing by itself" — not "registered via FlagPole with rollout in options-automator".
+- Anchor project-specific mechanisms to the general concept they implement (feature flag, database migration, background job, cache layer) so the reader has something familiar to hold on to.
+- When behavior involves an interaction between builds, branches, requests, or services, walk a short numbered concrete scenario first (1. `main` has a full build, 2. PR1 uploads a partial one, 3. PR2 is opened on top of PR1, ...) and only then describe the mechanism in the abstract.
+- State the problem in plain language before the solution mechanism — in the setup paragraph and within each step.
+- Keep identifiers verbatim in and around code, but never let an identifier's name carry the explanation on its own.
+
 ### Before/after rules for changed code
 
 Every `CHANGED` step must show both the before and the after. Never show only the new code:
@@ -127,7 +137,7 @@ After the final story step, add a short close-out with:
 Return this structure:
 
 1. `# Implementation Walkthrough`
-2. One brief setup paragraph (intent + scope)
+2. One brief setup paragraph — the problem in plain language, then intent and scope
 3. Numbered story steps (`## Step 1`, `## Step 2`, ...)
 4. `## Final Outcome`
 
@@ -138,7 +148,7 @@ Use this structure:
 ````markdown
 # Implementation Walkthrough
 
-This change adds source-aware feature behavior for a new UI path while preserving the existing invocation flow.
+Today, results produced by an agent and results produced by a human render identically, so users cannot tell which is which. This change makes the service record where each result came from and makes the UI render agent results differently. The flow from button click to render is otherwise untouched.
 
 ## Step 1 — User click enters the feature entrypoint [UNCHANGED CONTEXT]
 > Unchanged — pre-existing code shown for flow context only; nothing in this snippet was touched by this change.
@@ -259,6 +269,8 @@ Complete only when all checks pass:
 - Data-shape/model/API changes include concrete example input/output with sanitized representative values.
 - Branch-bearing changed logic (conditionals, set/collection operations, categorization/merge rules) includes one example scenario per distinct branch or input combination that yields a different result.
 - Trade-offs, alternatives, performance notes, and risk notes appear at relevant steps.
+- Every project-specific term, internal tool, or convention is explained in plain English at first mention; the prose stands alone for a developer with no prior knowledge of this codebase.
+- Multi-actor or multi-build behavior is introduced with a concrete numbered scenario before the abstract mechanism.
 - Facts are distinguished from inference.
 - Unknowns are explicitly labeled.
 - Conversation process/history does not appear as a walkthrough step.

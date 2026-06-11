@@ -96,3 +96,84 @@ Pass criteria:
    `envOverrides`.
 3. Scenarios are presented as a table or labeled list with concrete values, and the explanation of
    precedence order sits below the code block, not only above it.
+
+## HX-003: Jargon-saturated flag rollout must read as plain English
+
+- Label: negative
+- Kind: edge-case
+- Origin: synthetic
+- Source: authored 2026-06-11 to exercise the audience-calibration rules on a fixture whose repo
+  conventions invite insider shorthand; domain deliberately differs from EX-006
+- Status: holdout
+- Expected behavior: see pass criteria below.
+- Observed behavior: n/a until run.
+- Skill delta: n/a — validation only.
+- Anonymization: fully synthetic, including the internal framework names.
+
+### Content
+
+The fixture repo has its own internal conventions that a lazy walkthrough would name without
+explanation: feature flags are registered through an in-house framework called **Switchboard**;
+registrations carry an `expose_ui` field; flags are turned on per customer from a separate
+repository called **config-deployer**, not from this repo.
+
+The change: email digest sends gain a quiet-hours deferral, gated behind a new flag.
+
+Base state, `flags/registry.py` (existing registrations, unchanged):
+
+```python
+register(Flag("orgs:digest-batching", expose_ui=True))
+register(Flag("orgs:digest-reply-threading", expose_ui=False))
+```
+
+Working-tree change 1 — new registration appended in `flags/registry.py`:
+
+```python
+register(Flag("orgs:digest-quiet-hours", expose_ui=False))
+```
+
+Working-tree change 2 — `digests/scheduler.py`, the send loop:
+
+Before:
+
+```python
+for digest in due_digests:
+    send_digest(digest)
+```
+
+After:
+
+```python
+for digest in due_digests:
+    org = digest.organization
+    if flag_enabled("orgs:digest-quiet-hours", org) and in_quiet_hours(org, now):
+        defer_to_next_window(digest, org)
+    else:
+        send_digest(digest)
+```
+
+with `in_quiet_hours` and `defer_to_next_window` added as small new helpers reading
+`org.settings.quiet_hours` (an existing stored setting).
+
+Staging note: give `flags/registry.py` a short module docstring stating the repo convention
+("Flags are registered here via Switchboard; `expose_ui` controls frontend visibility; flags are
+enabled per customer from the config-deployer repo"). The information must be discoverable in the
+repo — the test is whether the walkthrough translates it into plain English, not whether it can
+invent it.
+
+Pass criteria (run with no extra audience instructions — the skill alone must produce these):
+
+1. The setup paragraph states the problem in plain English (digests currently send at any hour,
+   including the middle of the night for the recipient's organization) before naming any internal
+   tool, flag, or file.
+2. Switchboard, `expose_ui`, and config-deployer are each explained at first mention and anchored
+   to the general concept they implement (feature-flag framework; whether a flag is visible to
+   frontend code; per-customer rollout from a separate configuration repo — so merging activates
+   nothing by itself).
+3. The flag/setting/scheduler interaction is introduced as a numbered concrete scenario (e.g.
+   1. an org sets quiet hours 22:00–07:00, 2. a digest comes due at 23:00, 3. the flag is on, so
+   it is deferred to 07:00; flag off → sends immediately) before any abstract description, and the
+   example data covers the distinct outcomes: flag off; flag on outside quiet hours; flag on
+   inside quiet hours.
+4. No step relies on an identifier name alone to carry meaning — a developer who has never seen
+   this repository can follow every step without asking what a term refers to.

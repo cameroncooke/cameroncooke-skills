@@ -21,6 +21,18 @@ Secondary fixes from the same pass: exit criterion for `Filename:` headers narro
 Before blocks may omit `:start_line`; orphaned "semantic effect per hunk" rule re-homed under the
 before/after rules.
 
+## 2026-06-11 — Audience calibration (user feedback after live test)
+
+A real walkthrough produced by the revised skill passed on structure but failed on language: prose
+leaned on internal tool names, flag-framework conventions, and domain shorthand, readable only by
+someone already in the codebase ([EX-006], which includes the user's corrected rewrite). Root
+cause: the skill specified structure and evidence rules but never named the audience, so the
+walkthrough defaulted to insider register. Skill delta: "Write for a reader new to the codebase"
+section in Step 4 (terms defined at first mention, mechanisms anchored to general concepts,
+numbered concrete scenario before abstract mechanism, problem before solution), problem-first
+setup paragraph in the output contract, example setup paragraph rewritten to model the style, and
+two new exit criteria.
+
 Holdout validation, same day: HX-001 staged in a scratch repo and run by a fresh agent blind to
 the pass criteria — PASS on all four criteria (details in the HX-001 record). One observation, not
 yet promoted to a rule change: an elided Before block was not labeled `Before (simplified)`,
