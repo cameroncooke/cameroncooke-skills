@@ -30,6 +30,7 @@ Collect both sources before writing:
    - Changed file list
    - Diff per changed file (analyze full diffs locally, but only quote the minimum needed hunks in output)
    - Relevant unchanged context needed to explain behavior
+   - The **before** version of every changed behavior — including logic that was moved, extracted, or rewritten across files. Recover it from the base revision; never settle for "this is new" without checking whether equivalent logic existed elsewhere before.
 
 Use commands such as:
 
@@ -38,6 +39,8 @@ git status --short
 git diff --name-only
 git diff -- <file>
 git show -- <file>
+git show <base>:<path/to/file>      # recover the before version of a file
+git log -p -S '<symbol or phrase>' # find where moved/extracted logic previously lived
 ```
 
 Use history only when needed to disambiguate intent:
@@ -64,28 +67,44 @@ Skip non-essential detail while preserving causal clarity.
 
 For each story step:
 - Use a clear step title that describes behavior (no file path in the heading)
-- Mark the step as `UNCHANGED CONTEXT` or `CHANGED`
+- Mark the step as `UNCHANGED CONTEXT` or `CHANGED` in the heading
+- For `UNCHANGED CONTEXT` steps, open the body with the literal note line `> Unchanged — pre-existing code shown for flow context only; nothing in this snippet was touched by this change.` so unchanged code can never be mistaken for new or modified work
 - Place `Filename: `<relative/path/to/file.ext:start_line>`` immediately above each snippet
 - Optionally place `Symbol: `<function/method/class>`` above each snippet when useful
-- Show a short code snippet
-- For data-shape/model/API changes, include concrete example data (input/output or before/after payload) using sanitized, representative values
-- Explain the step in natural prose as a developer-to-developer walkthrough
+- Show the code following the before/after rules below
+- Explain the logic in prose **below** the code blocks it describes — a one-sentence framing line above a snippet is fine, but the substantive explanation of how the code works always follows the code, never replaces or precedes it
 - Explain what this step causes next in the flow
 - Avoid forward references: do not use a field/type/function in a step before showing where it is defined or introduced
 
 Avoid rigid template labels such as `Why this step exists:` or `Impact:`. Write readable, connected prose instead. Keep headings and narrative readable; put precise location in the snippet header.
 
-When code changed, prefer mini-diff snippets:
+### Before/after rules for changed code
 
-```diff
-- old behavior
-+ new behavior
-```
+Every `CHANGED` step must show both the before and the after. Never show only the new code:
 
-When the change affects data shape or behavior, add a small `Example input/output` block after the code snippet to show representative (synthetic) values flowing through the updated code.
+- **Small changes (one or two changed lines in a hunk):** use a git-style mini-diff:
+
+  ```diff
+  - old behavior
+  + new behavior
+  ```
+
+- **Larger changes:** show two separate code blocks, clearly labeled **Before** and **After**, each with its own `Filename:` header pointing at where that version lives (or lived).
+- **The before must be shown even when it lived in a different file or had a different shape.** If code was extracted, moved, or rewritten, recover the prior logic from the base revision and present it as the Before block under its original filename. A simplified or pseudocode Before is acceptable when the original is long or noisy — label it `Before (simplified)` — but the **After block must always be verbatim** from the new code.
+- **Moved or refactored code is never presented as brand-new.** When code is removed from one file and equivalent logic appears in another, treat that as one step: Before from the old location, After from the new location, followed by prose stating exactly what is mechanically identical and what actually changed — renamed variables, different data sources, revised conditions, or adjusted business rules, however subtle.
+
+Call out the semantic effect of every changed hunk in the prose below its snippet.
+
+### Branch-complete example data
+
+When a changed step contains conditional branches, set/collection operations, or merge/categorization logic, the example block must *prove* the behavior, not just illustrate it:
+
+- Provide one concrete example per distinct logic branch or input combination that produces a different result — every arm of an `if/elif/else`, and every meaningful membership combination (in A but not B, in B but not A, in both, in/out of a declared set, empty input).
+- Present the scenarios as a compact table or a labeled scenario list, with sanitized synthetic values, so a reader can verify each branch's output by inspection.
+- For simple single-path data-shape changes, a single before/after payload example remains sufficient.
+
 Do not copy verbatim payloads from logs, production data, or repository fixtures that may contain sensitive information.
 
-Call out semantic effect per changed hunk.
 ## Step 5: Integrate analysis inline
 
 Embed analysis at the relevant story step:
@@ -122,7 +141,7 @@ Use this structure:
 This change adds source-aware feature behavior for a new UI path while preserving the existing invocation flow.
 
 ## Step 1 — User click enters the feature entrypoint [UNCHANGED CONTEXT]
-The runtime trigger is still the button click. That handler forwards the input into the existing feature path, so the change does not alter how execution begins.
+> Unchanged — pre-existing code shown for flow context only; nothing in this snippet was touched by this change.
 
 Filename: `src/ui/button.ts:42`
 Symbol: `onClick`
@@ -130,10 +149,10 @@ Symbol: `onClick`
 button.onClick = () => startFeature(input)
 ```
 
-From here, control moves into `startFeature()`.
+The runtime trigger is still the button click. That handler forwards the input into the existing feature path, so the change does not alter how execution begins. From here, control moves into `startFeature()`.
 
 ## Step 2 — Entrypoint forwards to service [UNCHANGED CONTEXT]
-The orchestration layer remains unchanged and continues to delegate work to `run()`. This is important context because it means the new behavior is introduced deeper in the service layer, not at the boundary.
+> Unchanged — pre-existing code shown for flow context only; nothing in this snippet was touched by this change.
 
 Filename: `src/feature/entry.ts:10`
 Symbol: `startFeature`
@@ -143,10 +162,61 @@ export function startFeature(input: Input) {
 }
 ```
 
-That keeps the original control flow intact and localizes the behavior change.
+The orchestration layer continues to delegate work to `run()`, which means the new behavior is introduced deeper in the service layer, not at the boundary. That keeps the original control flow intact and localizes the behavior change.
 
-## Step 3 — Service return payload updated [CHANGED]
-This is the functional change: the service now includes source metadata in its return payload so downstream consumers can render source-specific UI behavior.
+## Step 3 — Sync categorization extracted into its own module and revised [CHANGED]
+The categorization logic that previously lived inline in `run()` now lives in a dedicated module. The extraction is mostly mechanical, but one business rule changed, so both versions are shown.
+
+Before (simplified) — inline logic removed from the old location:
+
+Filename: `src/feature/service.ts` (base revision)
+```ts
+const matched = intersect(headIds, baseIds)
+const added = diff(headIds, baseIds)
+const removed = head.selective ? new Set() : diff(baseIds, headIds)
+```
+
+After (verbatim) — new module:
+
+Filename: `src/feature/categorize.ts:12`
+Symbol: `categorize`
+```ts
+export function categorize(head: Manifest, base: Manifest) {
+  const headIds = new Set(Object.keys(head.items))
+  const baseIds = new Set(Object.keys(base.items))
+  const matched = intersect(headIds, baseIds)
+  const added = diff(headIds, baseIds)
+  let removed: Set<string>
+  let skipped: Set<string>
+  if (head.declaredIds) {
+    removed = diff(baseIds, head.declaredIds)
+    skipped = intersect(diff(head.declaredIds, headIds), baseIds)
+  } else if (head.selective) {
+    removed = new Set()
+    skipped = diff(baseIds, headIds)
+  } else {
+    removed = diff(baseIds, headIds)
+    skipped = new Set()
+  }
+  return { matched, added, removed, skipped }
+}
+```
+
+The `matched` and `added` computations are mechanically identical to the old inline version — only their home moved. What actually changed: the old code knew only two modes (selective vs full), while the new code adds a third branch for an explicit `declaredIds` list, and selective mode now reports base-only names as `skipped` instead of silently dropping them.
+
+Example input/output — one scenario per branch:
+
+| Scenario | head items | base items | declaredIds / selective | matched | added | removed | skipped |
+|---|---|---|---|---|---|---|---|
+| Full mode, item dropped from head | `{a}` | `{a, b}` | — / `false` | `{a}` | `{}` | `{b}` | `{}` |
+| Selective mode, item not uploaded | `{a}` | `{a, b}` | — / `true` | `{a}` | `{}` | `{}` | `{b}` |
+| Declared list excludes `b` | `{a}` | `{a, b}` | `[a]` | `{a}` | `{}` | `{b}` | `{}` |
+| Declared list includes `b`, not uploaded | `{a}` | `{a, b}` | `[a, b]` | `{a}` | `{}` | `{}` | `{b}` |
+| New item only in head | `{a, c}` | `{a}` | — / `false` | `{a}` | `{c}` | `{}` | `{}` |
+
+Rows 1–2 exercise the two pre-existing modes and confirm their behavior is preserved; rows 3–4 exercise the new `declaredIds` branch, showing that a name absent from the declared set is removed while a declared-but-not-uploaded name is merely skipped; row 5 confirms additions are mode-independent. Extracting rather than rewriting in place keeps `run()` readable and makes this branch table directly testable, at the cost of one extra module.
+
+## Step 4 — Service return payload updated [CHANGED]
 
 Filename: `src/feature/service.ts:88`
 Symbol: `run`
@@ -155,32 +225,22 @@ Symbol: `run`
 + return { state: "ready", source: "agent" }
 ```
 
-Example input/output:
-```json
-{
-  "input": { "taskId": "t_123", "state": "pending" },
-  "output_before": { "state": "pending" },
-  "output_after": { "state": "ready", "source": "agent" }
-}
-```
+This one-line change is shown as a mini-diff. The service now includes source metadata in its return payload so downstream consumers can render source-specific UI behavior. The team chose to enrich the existing payload instead of creating a second metadata endpoint, which avoids an extra network hop, but there is a compatibility risk for legacy consumers that assume the old payload shape.
 
-The team chose to enrich the existing payload instead of creating a second metadata endpoint, which avoids an extra network hop and synchronization complexity. Performance impact here is negligible because no additional I/O is introduced, but there is a compatibility risk for legacy consumers that assume the old payload shape.
-
-## Step 4 — UI consumes enriched payload [CHANGED]
-Rendering now branches on the new `source` field, which is what makes the feature visible to users. This step is where the service-layer change becomes observable behavior.
+## Step 5 — UI consumes enriched payload [CHANGED]
 
 Filename: `src/ui/render.ts:120`
 Symbol: `renderState`
-```ts
-if (data.source === "agent") {
-  showAgentState()
-}
+```diff
++ if (data.source === "agent") {
++   showAgentState()
++ }
 ```
 
-At this point the flow reaches the updated UI outcome.
+Rendering now branches on the new `source` field, which is what makes the feature visible to users. This is purely additive (no prior branch existed here), and it is where the service-layer change becomes observable behavior.
 
 ## Final Outcome
-The feature still starts at the same runtime trigger and follows the same orchestration path, but the changed service payload now drives source-aware rendering. Next validation should confirm that legacy consumers handle the added `source` field safely.
+The feature still starts at the same runtime trigger and follows the same orchestration path, but categorization now lives in its own module with a new declared-list mode, and the changed service payload drives source-aware rendering. Next validation should confirm that legacy consumers handle the added `source` field safely and that the declared-list branch is covered by tests.
 ````
 
 ## Validation and exit criteria
@@ -189,11 +249,15 @@ Complete only when all checks pass:
 
 - Story begins at runtime trigger and ends at final observable behavior.
 - Every changed file appears in at least one `CHANGED` story step.
-- Every snippet header uses `Filename: relative/path/to/file.ext:start_line` format.
+- Every snippet header uses `Filename: relative/path/to/file.ext:start_line` format; Before blocks recovered from the base revision may omit `:start_line` but must name the original file and note the revision.
 - No forward references: definitions/contracts appear before usages that depend on them.
-- Unchanged-but-critical context appears in `UNCHANGED CONTEXT` steps.
+- Unchanged-but-critical context appears in `UNCHANGED CONTEXT` steps, each opening with the literal unchanged note line.
+- Every `CHANGED` step shows both before and after — never the new code alone. One-or-two-line changes use a `diff` block; larger changes use separate labeled Before/After blocks.
+- Moved/extracted/refactored code shows the removed code from its original location as Before (simplified allowed, labeled) and the new code verbatim as After, with prose stating what is identical and what changed.
 - Each changed hunk includes reason + behavioral effect.
+- Substantive logic explanation appears below the code blocks it describes, not only above them.
 - Data-shape/model/API changes include concrete example input/output with sanitized representative values.
+- Branch-bearing changed logic (conditionals, set/collection operations, categorization/merge rules) includes one example scenario per distinct branch or input combination that yields a different result.
 - Trade-offs, alternatives, performance notes, and risk notes appear at relevant steps.
 - Facts are distinguished from inference.
 - Unknowns are explicitly labeled.
