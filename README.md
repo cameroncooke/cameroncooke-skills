@@ -66,6 +66,16 @@ Collects PR feedback through the skill’s helper scripts, then classifies each 
 
 ---
 
+### slop-swatter
+
+Removes AI slop from PR-level code changes before merge while preserving business behavior.
+
+Orchestrates role-scoped subagents to map staged, unstaged, and committed-but-unmerged changes; read full files and complete diffs; reuse existing project patterns; remove defensive overengineering, premature abstractions, boilerplate types, and readability-only helper functions; and run quality checks before handoff.
+
+**Invoke with:** `/slop-swatter`
+
+---
+
 ## Installation
 
 Install individual skills directly from this repo with `npx skills add`:
@@ -77,6 +87,7 @@ npx skills add cameroncooke/cameroncooke-skills@pr-learning
 npx skills add cameroncooke/cameroncooke-skills@release-tweet
 npx skills add cameroncooke/cameroncooke-skills@reconcile-merge-conflicts
 npx skills add cameroncooke/cameroncooke-skills@pr-comment-resolution
+npx skills add cameroncooke/cameroncooke-skills@slop-swatter
 ```
 
 You can also install manually by copying skill directories into your agent's skills folder:
