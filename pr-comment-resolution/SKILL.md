@@ -1,6 +1,6 @@
 ---
 name: pr-comment-resolution
-description: Audit and resolve GitHub pull request review comments with an evidence-based workflow. Use when asked to "address PR comments", "resolve review feedback", "handle inline comments", "reply to review threads", or "close out PR review notes".
+description: Audit and resolve GitHub pull request review comments with a concise, human-readable, evidence-based workflow. Use when asked to "address PR comments", "resolve review feedback", "handle inline comments", "reply to review threads", or "close out PR review notes".
 ---
 
 Audit PR feedback independently, then (after user approval) implement and reply/resolve in GitHub.
@@ -114,6 +114,20 @@ Shared scope rules for both paths:
 
 Do not return shallow summaries. Make the rationale specific enough that a reviewer can verify the decision quickly.
 
+### Give every issue a reference
+
+After filtering out non-actionable feedback, assign every actionable audit item a unique reference in report order: `PRC-01`, `PRC-02`, `PRC-03`, and so on. Keep the reference unchanged throughout approval, implementation, and replies. Use the reference when asking for approval or discussing an item, but use the collector's `comment_id` and `thread_id` for GitHub actions. Do not derive references from GitHub IDs.
+
+### Make the report understandable
+
+Every actionable item must contain these distinct views:
+
+- **What the reviewer said**: preserve the feedback wording, punctuation, and paragraph structure. Remove only non-feedback UI/HTML wrappers, bot footers, and metadata; do not paraphrase or silently correct the quote.
+- **What this means**: explain the situation in everyday language: what the system currently does, what may go wrong, who or what is affected, and why it matters. Write for a reader who does not know the codebase or implementation details. Use two to four short sentences, add only the context needed to understand the concern, and do not present it as reviewer wording.
+- **Analysis**: give the concise evidence-based decision. State what the code currently does, whether the concern is warranted, and the key evidence. Use file/line references where they help verification, explain necessary technical terms in place, and answer questions in the first sentence. For `valid` items, briefly cover both the exact issue check and the bounded same-pattern check without repeating the plain-language explanation.
+
+Keep `What this means` and `Analysis` separate: the former explains the domain problem for a non-technical reader; the latter explains the evidence and decision. Neither section should be a long technical walkthrough.
+
 ## Step 3: Present findings and ask approval
 
 Do not edit code before explicit user approval. Present findings using this format:
@@ -123,19 +137,28 @@ Do not edit code before explicit user approval. Present findings using this form
 
 <N> feedback item(s) reviewed on **<pr_title>**
 
+## TL;DR
+
+- `PRC-01` — `<classification>`: <plain-language summary of the concern and recommended action>
+- `PRC-02` — `<classification>`: <plain-language summary of the concern and recommended action>
+
 ---
 
-# <short title summarising the concern>
+# <reference> — <short title summarising the concern>
 
 `<classification>` · <review thread | general PR comment | review summary>
 
 ## What the reviewer said
 
-> <feedback content only — preserve meaning, strip HTML/UI chrome, bot footers, and non-feedback metadata>
+> <feedback content only — preserve wording, punctuation, and paragraph structure; strip only HTML/UI chrome, bot footers, and non-feedback metadata>
+
+## What this means
+
+<Two to four short sentences explaining what the system currently does, what may go wrong, who or what is affected, and why it matters, without assuming the reader knows the codebase.>
 
 ## Analysis
 
-<Discussion-style paragraph(s) explaining what you found when you checked the code. Reference specific files and lines naturally in prose, e.g. "In `src/foo.ts:42`, the value is already validated before this point..." Include short inline code snippets where they help. For question-style items, answer the question directly in the first sentence, then explain the supporting evidence and classification. State whether the concern is warranted and why. For `valid` items, explain both passes: how you confirmed the exact reported issue, then how you checked the bounded related changed PR surface for the same defect pattern.>
+<One or two concise paragraphs explaining what the code does, whether the concern is warranted, and the evidence for the classification. Reference specific files and lines naturally in prose, e.g. "In `src/foo.ts:42`, the value is already validated before this point..." Explain necessary technical terms inline. For question-style items, answer the question directly in the first sentence. For `valid` items, briefly cover both passes: how you confirmed the exact reported issue, then how you checked the bounded related changed PR surface for the same defect pattern.>
 
 ## Expanded issues found
 
@@ -143,17 +166,21 @@ Do not edit code before explicit user approval. Present findings using this form
 
 ## Proposed resolution
 
-<What to do and why. For `no change`, explain why no action is needed. For code/doc changes, describe the specific change clearly. Keep it brief — one or two sentences is fine. For `valid` items, the fix on offer should cover both the originally reported issue and any additional same-pattern instances listed above.>
+<Explain the outcome in plain language first, then what change will achieve it. For `no change`, explain why no action is needed. Avoid unexplained implementation terms and describe what will be different for the user or system. Keep it to one to three sentences. For `valid` items, the fix on offer should cover both the originally reported issue and any additional same-pattern instances listed above.>
 
 ---
 
-# <short title summarising the concern>
+# <reference> — <short title summarising the concern>
 
 `<classification>` · <review thread | general PR comment | review summary>
 
 ## What the reviewer said
 
 > ...
+
+## What this means
+
+...
 
 ## Analysis
 
@@ -174,17 +201,21 @@ Do not edit code before explicit user approval. Present findings using this form
 
 ## Next steps
 
-<N> item(s) need changes. If you approve, I will:
-  1. <change 1, covering the reported issue plus any same-pattern instances listed in Expanded issues found>
-  2. <change 2, covering the reported issue plus any same-pattern instances listed in Expanded issues found>
+<N> item(s) need changes. Approve or reject items by reference, for example: `Approve PRC-01 and PRC-03; reject PRC-02.` If you approve, I will:
+  1. <change for PRC-01, covering the reported issue plus any same-pattern instances listed in Expanded issues found>
+  2. <change for PRC-03, covering the reported issue plus any same-pattern instances listed in Expanded issues found>
   3. Run quality checks, then come back for commit/push approval before posting GitHub replies
 ````
 
 Formatting rules:
-- Each item starts with a `#` heading that describes the concern in plain language.
+- Start the report with a `## TL;DR` section immediately after the audit title and item count. Include one concise, plain-language line for each actionable reference, with its classification and recommended action. Do not use the TL;DR as a substitute for the reviewer quote, `What this means`, or `Analysis` sections.
+- Each actionable item starts with a `#` heading containing its unique reference and a plain-language concern title, for example `# PRC-01 — Missing authorization check`.
+- Assign references after non-actionable feedback has been filtered, in displayed report order. Never reuse or renumber a reference within the audit.
 - Classification and comment type go on one line directly under the heading using inline code + separator.
 - Reviewer words always in blockquotes — clearly separated from agent analysis.
-- Analysis reads like prose, not bullet lists. Weave file references into sentences naturally.
+- `What this means` uses two to four short sentences to explain the situation, impact, and relevant context in everyday language without codebase context.
+- `Analysis` reads like concise prose, not bullet lists. Weave file references into sentences naturally and explain necessary jargon in place.
+- `Proposed resolution` describes the user or system outcome in plain language before naming the implementation change; avoid unexplained technical terms.
 - For inline items, make it clear that the audit started from the review thread location and nearby diff.
 - For non-inline items, make it clear which changed code path you inspected and why it was the right place to answer the concern.
 - For question-style items, answer the question directly in the first sentence of `Analysis`.
@@ -199,6 +230,8 @@ Formatting rules:
 Keep changes minimal and in scope.
 
 For each approved `valid` item:
+- Carry its issue reference through the implementation notes and any user-facing status updates; do not renumber references.
+
 1. Fix the exact reported issue you already confirmed in the first audit pass.
 2. Fix every additional same-pattern instance you already found in the second bounded pass.
 3. For non-inline concerns, keep the implementation anchored to the relevant changed code path you identified during the audit.
@@ -229,6 +262,7 @@ After user approves commit/push and push succeeds:
 
 1. Build an action JSON.
 2. Include commit references in reply bodies (for example: `Fixed in abc1234`).
+   Include the issue reference when useful (for example: `PRC-01 fixed in abc1234`), but never use it in place of the required GitHub comment or thread IDs.
 3. Dry-run first, then apply:
 
 ```bash

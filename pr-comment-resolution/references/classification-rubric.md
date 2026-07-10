@@ -29,15 +29,19 @@ Use this rubric when auditing PR feedback. Classify based on repository evidence
 ## Evidence standards
 
 For each decision, include:
+- A concise TL;DR line containing the issue reference, classification, concern, and recommended action
 - Relevant file(s) and line references where available
 - Behavior impact (what breaks or improves)
 - Risk analysis (correctness, performance, readability, security)
 - Why the proposed resolution is the best scoped outcome
+- A clear plain-language explanation of the situation, impact, and relevant context, written in two to four short sentences for someone unfamiliar with the codebase
+- A plain-language proposed resolution that explains the desired outcome before the implementation change
 - For non-inline feedback, name the code path(s) you inspected and why they were the right places to verify the concern
 - For inline feedback, anchor the evidence to the review thread location and nearby diff unless the code path requires a small directly related expansion
 - For question-style items, answer the question directly before explaining the supporting evidence
 - For `valid` items, identify the defect pattern clearly and include evidence for any additional same-pattern instances you verified in the related changed PR surface
 - Keep the evidence scoped to the same defect class and related changed PR surface; do not use it to justify unrelated cleanup, refactors, or different issue classes
+- Keep the analysis concise and understandable without requiring the reader to know the implementation details; explain necessary jargon in place
 
 ## Bias guardrails
 
